@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+GIT_DIR=$(git rev-parse --git-dir)
+
+REPO_HOOK_FILE=$GIT_DIR/hooks/$(basename "${BASH_SOURCE[0]}")
+
+if [ -f "$REPO_HOOK_FILE" ] && [ -x "$REPO_HOOK_FILE" ]; then
+  $REPO_HOOK_FILE "$@"
+fi

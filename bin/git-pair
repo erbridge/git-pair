@@ -1,0 +1,102 @@
+#!/bin/bash
+set -e
+
+function array-contains {
+  local array="$1[@]"
+  local target=$2
+  local exit_code=1
+
+  for value in "${!array}"; do
+    if [ "$value" = "$target" ]; then
+      exit_code=0
+      break
+    fi
+  done
+
+  return $exit_code
+}
+
+function array-excludes {
+  if array-contains "$@"; then
+    return 1
+  fi
+
+  return 0
+}
+
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 pair_alias ..."
+  exit 1
+fi
+
+GIT_DIR=$(git rev-parse --git-dir)
+CO_AUTHORS_FILE=$GIT_DIR/current-co-authors
+PAIRS_FILE=$HOME/.gitpairs
+
+ALL_PAIR_ALIASES=()
+ALL_PAIRS=()
+
+OLD_IFS=$IFS
+IFS="="
+
+while read -r ALIAS DETAILS; do
+  ALL_PAIR_ALIASES+=("$ALIAS")
+  ALL_PAIRS+=("$ALIAS" "$DETAILS")
+done < "$PAIRS_FILE"
+
+IFS=$OLD_IFS
+
+PAIR_ALIASES=()
+NEW_PAIR_ALIASES=()
+
+while [ "$1" ]; do
+  PAIR_ALIAS=$1; shift
+
+  PAIR_ALIASES+=("$PAIR_ALIAS")
+
+  if array-excludes ALL_PAIR_ALIASES "$PAIR_ALIAS"; then
+    NEW_PAIR_ALIASES+=("$PAIR_ALIAS")
+  fi
+done
+
+for NEW_PAIR_ALIAS in "${NEW_PAIR_ALIASES[@]}"; do
+  echo "Creating $NEW_PAIR_ALIAS..."
+
+  read -rp "Enter $NEW_PAIR_ALIAS's name: " NAME
+  read -rp "Enter $NEW_PAIR_ALIAS's email address: " EMAIL
+
+  NEW_PAIR_DETAILS="$NAME <$EMAIL>"
+
+  echo "$NEW_PAIR_ALIAS=$NEW_PAIR_DETAILS" >> "$PAIRS_FILE"
+
+  echo "Added \"$NEW_PAIR_DETAILS\" as \"$NEW_PAIR_ALIAS\"."
+
+  ALL_PAIRS+=("$NEW_PAIR_ALIAS" "$NEW_PAIR_DETAILS")
+done
+
+if [ -f "$CO_AUTHORS_FILE" ]; then
+  echo "Clearing existing pairs..."
+
+  rm "$CO_AUTHORS_FILE"
+fi
+
+for PAIR_ALIAS in "${PAIR_ALIASES[@]}"; do
+  PAIR_DETAILS=
+
+  for INDEX in "${!ALL_PAIRS[@]}"; do
+    if [[ "${ALL_PAIRS[$INDEX]}" = "$PAIR_ALIAS" ]]; then
+      PAIR_DETAILS=${ALL_PAIRS[$INDEX+1]}
+      break
+    fi
+  done
+
+  if [ -z "$PAIR_DETAILS" ]; then
+    echo "Unable to find details for $PAIR_ALIAS. Stopping."
+    exit 1
+  else
+    echo "$PAIR_DETAILS" >> "$CO_AUTHORS_FILE"
+    echo "Set $PAIR_ALIAS as a pair."
+  fi
+done
+
+echo "Done!"

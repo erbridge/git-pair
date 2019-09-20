@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+GIT_DIR=$(git rev-parse --git-dir)
+CO_AUTHORS_FILE=$GIT_DIR/current-co-authors
+
+if [ -f "$CO_AUTHORS_FILE" ]; then
+  echo "Clearing current pairs..."
+
+  rm "$CO_AUTHORS_FILE"
+
+  echo "Done!"
+else
+  echo "Nothing to do!"
+fi

@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+GIT_DIR=$(git rev-parse --git-dir)
+
+REPO_HOOK_FILE=$GIT_DIR/hooks/$(basename "${BASH_SOURCE[0]}")
+
+if [ -f "$REPO_HOOK_FILE" ] && [ -x "$REPO_HOOK_FILE" ]; then
+  $REPO_HOOK_FILE "$@"
+fi
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+# SHA1=$3
+
+CO_AUTHORS_FILE=$GIT_DIR/current-co-authors
+
+if [ -f "$CO_AUTHORS_FILE" ]; then
+  TRAILERS=()
+
+  while read -r LINE; do
+    if [ -z "$LINE" ]; then
+      continue
+    fi
+
+    TRAILERS+=(--trailer "Co-authored-by: $LINE")
+  done < "$CO_AUTHORS_FILE"
+
+  git interpret-trailers \
+    --in-place \
+    --trim-empty \
+    "${TRAILERS[@]}" \
+    "$COMMIT_MSG_FILE"
+
+  if [ -z "$COMMIT_SOURCE" ]; then
+    perl \
+      -i.bak \
+      -pe 'print "\n" if !$first_line++' \
+      "$COMMIT_MSG_FILE"
+  fi
+fi
