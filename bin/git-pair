@@ -39,6 +39,10 @@ ALL_PAIRS=()
 OLD_IFS=$IFS
 IFS="="
 
+if [ ! -f "$PAIRS_FILE" ]; then
+  touch "$PAIRS_FILE"
+fi
+
 while read -r ALIAS DETAILS; do
   ALL_PAIR_ALIASES+=("$ALIAS")
   ALL_PAIRS+=("$ALIAS" "$DETAILS")
